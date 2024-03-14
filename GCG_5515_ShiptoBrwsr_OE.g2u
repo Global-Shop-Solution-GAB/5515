@@ -1,0 +1,65 @@
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.Try
+	V.Local.sError.Declare(String," ")
+	v.Local.sSQL.Declare(String)
+	v.Local.sPhone.Declare(String)
+	v.Local.sTemp.Declare(String)
+	V.Local.sCol.Declare(String)
+	V.Local.sColW.Declare(String)
+	v.Local.sret.Declare(String)
+	
+	'coded by Silas onsite for simpson performance. 
+	'this will work from hook 11751 and run the browser based off contact phone to order history and let the user populate the address from a record in history
+	
+	
+	f.ODBC.Connection!conx.opencompanyconnection(72000)
+	
+	'strip phone passed from OE.
+	v.Local.sPhone.Set(v.Passed.000051)
+'	v.Local.sPhone.Set("(936) 355-3604")
+	f.Intrinsic.String.StripCharacters(v.Local.sPhone,v.Local.sPhone)
+	
+	'build sql
+	f.Intrinsic.String.Build("select distinct Contact, Contact_phone, rtrim(ltrim(contact_email)),name_customer_ship,Address1_ship,address2_ship,address3_ship,address4_ship,address5_ship,city_ship,State_ship,Zip_ship,Country_ship,attention_ship from v_order_hist_head where replace(replace(replace(replace(replace(contact_phone,' ',''),'-',''),'+',''),'(',''),')','') like '%{0}%'",v.Local.sPhone,v.Local.sSQL)
+
+	'Split Column Names into an array (*!* delimited string)
+	F.Intrinsic.String.Split("Contact*!*Phone*!*Email*!*Ship-to Name*!*Addr 1*!*Addr 2*!*Addr3*!*Addr4*!*Addr5*!*City*!*State*!*Zip*!*Country*!*Attn","*!*",V.Local.sCol)
+	'Split Column widths into an array (*!* delimited string)
+	F.Intrinsic.String.Split("300*!*300*!*300*!*300*!*300*!*300*!*300*!*300*!*300*!*300*!*300*!*300*!*300*!*300","*!*",V.Local.sColW)
+	Function.Intrinsic.UI.SetBrowserColumnResizeMode(3)
+	F.Intrinsic.UI.Browser("Select Ship-to Contact","conx",V.Local.sSQL,V.Local.sCol,V.Local.sColW,V.Local.sRet)
+	F.Intrinsic.Control.If(V.Local.sRet.IsCancel)
+		'end
+		f.ODBC.Connection!conx.Close
+	f.Intrinsic.Control.Else
+		f.Intrinsic.String.Split(v.Local.sret,"*!*",v.Local.sRet)
+		Variable.passed.000001.Set(v.Local.sret(0).trim)
+		Variable.Passed.000071.Set(v.Local.sret(2).trim)
+		Variable.Passed.000008.Set(v.Local.sret(3).trim)	
+		Variable.Passed.000010.Set(v.Local.sret(4).trim)
+		Variable.Passed.000012.Set(v.Local.sret(5).trim)
+		Variable.Passed.000057.Set(v.Local.sret(6).trim)
+		Variable.Passed.000058.Set(v.Local.sret(7).trim)
+		Variable.Passed.000059.Set(v.Local.sret(8).trim)
+		Variable.Passed.000016.Set(v.Local.sret(9).trim)
+		Variable.Passed.000017.Set(v.Local.sret(10).trim)
+		Variable.Passed.000018.Set(v.Local.sret(11).trim)
+		Variable.Passed.000020.Set(v.Local.sret(12).trim)
+		Variable.Passed.000022.Set(v.Local.sret(13).trim)
+		
+		f.ODBC.Connection!conx.Close
+	F.Intrinsic.Control.EndIf
+
+	F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+		F.Intrinsic.String.Build("Project: {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}","",V.Ambient.NewLine,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.EndIf
+Function.Intrinsic.Control.EndTry
+
+Program.Sub.Main.End
